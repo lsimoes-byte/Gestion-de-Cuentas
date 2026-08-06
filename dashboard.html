@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOVA-AM · Estado en vivo</title>
+<style>
+  :root {
+    --navy:#05035C; --navy-d:#030326; --navy-l:#EEF0FA;
+    --green:#77B82A; --green-l:#F0F8E6;
+    --red:#D64545; --red-l:#FBEAEA;
+    --amber:#E8A33D; --amber-l:#FCF3E3;
+    --gray:#667085; --border:#E1E4EA; --bg:#F5F6FA; --white:#FFFFFF;
+  }
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--navy-d); padding: 24px; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; margin-bottom: 6px; }
+  h1 { font-size: 22px; color: var(--navy); }
+  .updated { font-size: 12.5px; color: var(--gray); }
+  .subtitle { font-size: 13px; color: var(--gray); margin-bottom: 24px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 22px; }
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 16px; border-top: 4px solid var(--navy); }
+  .card .label { font-size: 11.5px; color: var(--gray); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+  .card .value { font-size: 26px; font-weight: 700; color: var(--navy); }
+  .card.ok { border-top-color: var(--green); }
+  .card.warn { border-top-color: var(--amber); }
+  .card.bad { border-top-color: var(--red); }
+  .badge { display:inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .badge.ok { background: var(--green-l); color: #4a7018; }
+  .badge.bad { background: var(--red-l); color: var(--red); }
+  .badge.warn { background: var(--amber-l); color: #93691f; }
+  .badge.neutral { background: var(--navy-l); color: var(--navy); }
+  section { margin-bottom: 26px; }
+  section h2 { font-size: 14px; color: var(--navy); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .03em; }
+  .row { display:flex; gap: 10px; flex-wrap: wrap; }
+  .pill { background: var(--white); border:1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; display:flex; align-items:center; gap:8px; }
+  .dot { width:8px; height:8px; border-radius:50%; }
+  .dot.CRITICAL, .dot.bad { background: var(--red); }
+  .dot.HIGH, .dot.warn { background: var(--amber); }
+  .dot.MEDIUM { background: #E8D23D; }
+  .dot.LOW, .dot.ok { background: var(--green); }
+  footer { font-size: 11.5px; color: var(--gray); text-align:center; padding: 20px 0; }
+  #err { display:none; background: var(--red-l); color: var(--red); border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 13px; }
+  a { color: var(--navy); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>NOVA-AM · Estado en vivo</h1>
+    <div class="updated" id="updated">cargando…</div>
+  </header>
+  <div class="subtitle">Solo cifras agregadas — sin nombres de cuenta ni datos comerciales sensibles. Ver la definición completa del proyecto en <a href="./index.html">la propuesta</a>.</div>
+
+  <div id="err"></div>
+  <div id="content" style="display:none;">
+    <section>
+      <h2>Última corrida</h2>
+      <div class="grid" id="lastRunGrid"></div>
+    </section>
+
+    <section>
+      <h2>Alertas abiertas</h2>
+      <div class="grid" id="alertsGrid"></div>
+      <div class="row" id="alertsBySeverity" style="margin-top:10px;"></div>
+    </section>
+
+    <section>
+      <h2>Calidad de datos y aprobaciones</h2>
+      <div class="grid" id="qualityGrid"></div>
+    </section>
+
+    <section>
+      <h2>Corridas últimos 7 días</h2>
+      <div class="row" id="runsRow"></div>
+    </section>
+  </div>
+
+  <footer>Generado automáticamente por NOVA-AM (Apps Script) · <a href="https://github.com/lsimoes-byte/nova-am-automation" target="_blank" rel="noopener">código fuente</a></footer>
+</div>
+
+<script>
+async function loadDashboard() {
+  try {
+    const res = await fetch('./dashboard-data.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    document.getElementById('err').style.display = 'block';
+    document.getElementById('err').textContent = 'No se pudo cargar el estado (' + e.message + '). El primer despliegue automático de datos puede tardar hasta la próxima corrida programada.';
+  }
+}
+
+function statusBadgeClass(status) {
+  if (status === 'COMPLETED') return 'ok';
+  if (status === 'DATA_BLOCKED' || status === 'MODEL_FAILED' || status === 'VALIDATION_FAILED') return 'bad';
+  if (status === 'PARTIAL' || status === 'LOCKED') return 'warn';
+  return 'neutral';
+}
+
+function render(data) {
+  document.getElementById('content').style.display = 'block';
+  document.getElementById('updated').textContent = 'Actualizado: ' + (data.generated_at_local || data.generated_at || '—');
+
+  const lastRunGrid = document.getElementById('lastRunGrid');
+  const lr = data.last_run || {};
+  lastRunGrid.innerHTML = `
+    <div class="card ${statusBadgeClass(lr.status)}">
+      <div class="label">Workflow</div>
+      <div class="value" style="font-size:18px;">${lr.workflow || '—'}</div>
+    </div>
+    <div class="card ${statusBadgeClass(lr.status)}">
+      <div class="label">Estado</div>
+      <div class="value" style="font-size:18px;"><span class="badge ${statusBadgeClass(lr.status)}">${lr.status || '—'}</span></div>
+    </div>
+    <div class="card">
+      <div class="label">Fecha de corte</div>
+      <div class="value" style="font-size:18px;">${lr.as_of_date || '—'}</div>
+    </div>
+  `;
+
+  const alerts = data.alerts || { open_total: 0, by_severity: {}, by_rule_family: {} };
+  const alertsGrid = document.getElementById('alertsGrid');
+  alertsGrid.innerHTML = `
+    <div class="card ${alerts.open_total > 0 ? 'warn' : 'ok'}">
+      <div class="label">Alertas abiertas (total)</div>
+      <div class="value">${alerts.open_total ?? 0}</div>
+    </div>
+    <div class="card">
+      <div class="label">R5 · Salud de cuentas</div>
+      <div class="value">${(alerts.by_rule_family && alerts.by_rule_family.R5) ?? 0}</div>
+    </div>
+    <div class="card">
+      <div class="label">R6 · Cotiza y no cierra</div>
+      <div class="value">${(alerts.by_rule_family && alerts.by_rule_family.R6) ?? 0}</div>
+    </div>
+    <div class="card">
+      <div class="label">Casos de recovery</div>
+      <div class="value">${(alerts.by_rule_family && alerts.by_rule_family.RECOVERY) ?? 0}</div>
+    </div>
+  `;
+  const sev = alerts.by_severity || {};
+  document.getElementById('alertsBySeverity').innerHTML = ['CRITICAL','HIGH','MEDIUM','LOW'].map(s =>
+    `<div class="pill"><span class="dot ${s}"></span>${s}: ${sev[s] ?? 0}</div>`).join('');
+
+  const dq = data.data_quality || {};
+  const ap = data.approvals || {};
+  document.getElementById('qualityGrid').innerHTML = `
+    <div class="card ${dq.open_incidents > 0 ? 'warn' : 'ok'}">
+      <div class="label">Incidentes de calidad abiertos</div>
+      <div class="value">${dq.open_incidents ?? 0}</div>
+    </div>
+    <div class="card ${ap.pending > 0 ? 'warn' : 'ok'}">
+      <div class="label">Aprobaciones pendientes</div>
+      <div class="value">${ap.pending ?? 0}</div>
+    </div>
+  `;
+
+  const runs = data.runs_last_7_days || { completed: 0, blocked: 0, failed: 0 };
+  document.getElementById('runsRow').innerHTML = `
+    <div class="pill"><span class="dot ok"></span>Completadas: ${runs.completed ?? 0}</div>
+    <div class="pill"><span class="dot warn"></span>Bloqueadas: ${runs.blocked ?? 0}</div>
+    <div class="pill"><span class="dot bad"></span>Fallidas: ${runs.failed ?? 0}</div>
+  `;
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
