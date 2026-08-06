@@ -1,9 +1,34 @@
 {
-  "generated_at": "pending-first-run",
-  "generated_at_local": "Aún no se ha publicado la primera corrida",
-  "last_run": { "workflow": null, "status": null, "as_of_date": null },
-  "runs_last_7_days": { "completed": 0, "blocked": 0, "failed": 0 },
-  "alerts": { "open_total": 0, "by_severity": { "CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0 }, "by_rule_family": { "R5": 0, "R6": 0, "RECOVERY": 0 } },
-  "data_quality": { "open_incidents": 0 },
-  "approvals": { "pending": 0 }
+  "generated_at": "2026-08-06T19:53:18.566Z",
+  "generated_at_local": "2026-08-06 14:53 (America/Bogota)",
+  "last_run": {
+    "workflow": null,
+    "status": null,
+    "as_of_date": null
+  },
+  "runs_last_7_days": {
+    "completed": 0,
+    "blocked": 0,
+    "failed": 0
+  },
+  "alerts": {
+    "open_total": 0,
+    "by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 0,
+      "LOW": 0
+    },
+    "by_rule_family": {
+      "R5": 0,
+      "R6": 0,
+      "RECOVERY": 0
+    }
+  },
+  "data_quality": {
+    "open_incidents": 0
+  },
+  "approvals": {
+    "pending": 0
+  }
 }
