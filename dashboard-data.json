@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-20T11:19:20.198Z",
-  "generated_at_local": "2026-08-20 06:19 (America/Bogota)",
+  "generated_at": "2026-08-21T11:19:20.386Z",
+  "generated_at_local": "2026-08-21 06:19 (America/Bogota)",
   "last_run": {
     "workflow": "WF-03",
     "status": "DATA_BLOCKED",
@@ -8,7 +8,7 @@
   },
   "runs_last_7_days": {
     "completed": 0,
-    "blocked": 18,
+    "blocked": 19,
     "failed": 0
   },
   "alerts": {
